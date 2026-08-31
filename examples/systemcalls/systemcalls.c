@@ -1,4 +1,8 @@
 #include "systemcalls.h"
+#include <sys/wait.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -16,6 +20,22 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    int status = system(cmd);
+
+    if (status == -1)
+    {
+        // system() itself failed to fork/exec a shell
+        return false;
+    }
+
+    // system() returns the command's exit status encoded like waitpid() does,
+    // so use WIFEXITED/WEXITSTATUS to check it actually exited normally with code 0
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+    {
+        return true;
+    }
+
+    return false;
 
     return true;
 }
@@ -59,6 +79,44 @@ bool do_exec(int count, ...)
  *
 */
 
+    fflush(stdout);
+
+    pid_t pid = fork();
+
+    if (pid == -1)
+    {
+        // fork failed
+        va_end(args);
+        return false;
+    }
+    else if (pid == 0)
+    {
+        // child process
+        execv(command[0], command);
+
+        // execv only returns if it failed
+        exit(1);
+    }
+    else
+    {
+        // parent process
+        int status;
+        if (waitpid(pid, &status, 0) == -1)
+        {
+            va_end(args);
+            return false;
+        }
+
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        {
+            va_end(args);
+            return true;
+        }
+
+        va_end(args);
+        return false;
+    }
+
     va_end(args);
 
     return true;
@@ -92,6 +150,58 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    fflush(stdout);
+
+    pid_t pid = fork();
+
+    if (pid == -1)
+    {
+        // fork failed
+        va_end(args);
+        return false;
+    }
+    else if (pid == 0)
+    {
+        // child process
+
+        int fd = open(outputfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd == -1)
+        {
+            exit(1);
+        }
+
+        if (dup2(fd, STDOUT_FILENO) == -1)
+        {
+            close(fd);
+            exit(1);
+        }
+
+        close(fd);
+
+        execv(command[0], command);
+
+        // execv only returns if it failed
+        exit(1);
+    }
+    else
+    {
+        // parent process
+        int status;
+        if (waitpid(pid, &status, 0) == -1)
+        {
+            va_end(args);
+            return false;
+        }
+
+        if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+        {
+            va_end(args);
+            return true;
+        }
+
+        va_end(args);
+        return false;
+    }
 
     va_end(args);
 
