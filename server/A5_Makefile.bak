@@ -1,7 +1,5 @@
 CC ?= $(CROSS_COMPILE)gcc
-CFLAGS ?= -Wall -Werror -g -O0
-LDFLAGS ?= -lpthread -lrt
-
+CFLAGS ?= -Wall -Wextra -g -O0
 TARGET := aesdsocket
 SRCS := aesdsocket.c
 OBJS := $(SRCS:.c=.o)
@@ -12,7 +10,7 @@ all: $(TARGET)
 default: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET) $(INCLUDES) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
