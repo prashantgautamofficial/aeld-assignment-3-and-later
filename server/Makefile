@@ -1,4 +1,4 @@
-CC := $(CROSS_COMPILE)gcc
+CC ?= $(CROSS_COMPILE)gcc
 CFLAGS ?= -Wall -Wextra -g -O0
 TARGET := aesdsocket
 SRCS := aesdsocket.c
